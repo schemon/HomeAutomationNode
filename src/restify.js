@@ -72,15 +72,22 @@ function htmlFormatCommands(body, callback) {
 
 function client(req, res, next) {
 	fs.readFile('./client.html', function (err, html) {
-    if (err) {
-        throw err; 
-    }
 
 		res.setHeader('Content-Type', 'text/html');
 		res.writeHead(200);
 		res.end(html);
 		next();
 	});
+}
+
+
+function publicFile(req, res, next) {
+  fs.readFile('./public/' +req.params.fileName, function (err, content) {
+    res.setHeader('Content-Type', 'text/css');
+    res.writeHead(200);
+    res.end(content);
+    next();
+  });
 }
 
 function script(req, res, next) {
@@ -101,6 +108,7 @@ function script(req, res, next) {
 server.post('/auth', auth.auth);
 server.get('/client', client);
 server.get('/script/:res', script);
+server.get('/public/:fileName', publicFile);
 server.get('/command', commands);
 
 server.get('/command/:sid', function(req, res, next) {

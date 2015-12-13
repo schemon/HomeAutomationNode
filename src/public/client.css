@@ -1,0 +1,84 @@
+
+.status.connection {
+  width: 100%;
+  height: 30px;
+  text-align: center;
+}
+
+#status-message {
+  margin-top: 5px;
+  font-family: sans-serif;
+  display: inline-block;
+}
+
+.status.connection {
+  background-color: #DAA;
+  color: white;
+  border-color: #EEE;
+  border-style: solid;
+}
+
+.status.connection.red {
+  background-color: red;
+}
+
+
+.button-holder button {
+  margin: auto;
+  width: 100%;
+}
+
+.button-holder {
+  width: 45%;
+  display: inline-block;
+  margin: 2%;
+}
+
+button {
+  background-color: #DAA;
+  color: white;
+  border-color: #EEE;
+  border-style: solid;
+}
+
+button:focus {
+  outline: 0;
+}
+
+button:active{
+  background-color: #EBB;
+  border-color: #CCC;
+}
+
+body {
+  background-color: #FEE;
+}
+
+#messages {
+  margin: auto;
+  width: 100%;
+  text-align: center;
+}
+
+@media screen and (min-width: 240px) {
+    button {
+        font-size: 25px;
+        height: 75px;
+    }
+}
+
+@media screen and (min-width: 480px) {
+    button {
+        font-size: 50px;
+        height: 150px;
+    }
+}
+
+
+@media screen and (min-width: 960px) {
+    button {
+        font-size: 100px;
+        height: 300px;
+    }
+}
+

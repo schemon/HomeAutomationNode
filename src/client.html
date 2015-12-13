@@ -1,17 +1,25 @@
 <html>
 <head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
   <script src="https://js.pusher.com/3.0/pusher.min.js"></script>
   <script src="script/client_pusher.js"></script>
+  <!--
   <script src="script/fb_login.js"></script>
+  -->
+  <link rel="stylesheet" href="public/client.css">
 
 </head>
-<body style="max-width:200px;">
-<fb:login-button scope="public_profile,email" onlogin="checkLoginState();">
-</fb:login-button>
+<body>
 
-<div id="status">
+<div class="status connection">
+  <div id="status-message"></div>
+  <div id="status"></div>
 </div>
+
+ <fb:login-button scope="public_profile,email" onlogin="checkLoginState();">
+  </fb:login-button>
+ 
 
 </body>
 </html>
