@@ -1,4 +1,8 @@
 
+$(document).ready(function() {
+  initPusher();
+});
+
 var endpoint = "/auth";
 var APP_KEY = '599cb5ed77cd5efb659a';
 
@@ -69,7 +73,7 @@ $(document).ready(function() {
   document.body.innerHTML += '<div id="messages"></div>';
 	getCommands();
   var queryParams = getUrlVars();
-  console.log(queryParams); 
+  console.log(queryParams);
   window.setInterval(refreshConnectionStatus, 3000);
 });
 

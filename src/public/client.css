@@ -1,8 +1,8 @@
 
-.status.connection {
+.status-bar {
   width: 100%;
-  height: 30px;
-  text-align: center;
+  min-height: 50px;
+  text-align: left;
 }
 
 #status-message {
@@ -11,41 +11,41 @@
   display: inline-block;
 }
 
-.status.connection {
+.status-bar {
   background-color: #DAA;
   color: white;
   border-color: #EEE;
   border-style: solid;
 }
 
-.status.connection.red {
+.status-bar.red {
   background-color: red;
 }
 
 
-.button-holder button {
+.command {
   margin: auto;
   width: 100%;
 }
 
-.button-holder {
+.command-holder {
   width: 45%;
   display: inline-block;
   margin: 2%;
 }
 
-button {
+.command {
   background-color: #DAA;
   color: white;
   border-color: #EEE;
   border-style: solid;
 }
 
-button:focus {
+.command:focus {
   outline: 0;
 }
 
-button:active{
+.command:active{
   background-color: #EBB;
   border-color: #CCC;
 }
@@ -61,14 +61,14 @@ body {
 }
 
 @media screen and (min-width: 240px) {
-    button {
+    .command {
         font-size: 25px;
         height: 75px;
     }
 }
 
 @media screen and (min-width: 480px) {
-    button {
+    .command {
         font-size: 50px;
         height: 150px;
     }
@@ -76,7 +76,7 @@ body {
 
 
 @media screen and (min-width: 960px) {
-    button {
+    .command {
         font-size: 100px;
         height: 300px;
     }

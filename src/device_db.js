@@ -2,6 +2,10 @@
 var Sequelize = require('sequelize');
 var uuid4 = require('uuid4');
 
+function createUUID() {
+  return uuid4().split('-').join('');
+}
+
 function init() {
   var sequelize = new Sequelize('postgres://simarv:yknxIsWwG053O8vm@live01.c9gmytn7bxez.eu-central-1.rds.amazonaws.com:5432/postgres');
   return sequelize;
@@ -21,17 +25,20 @@ function model(callback) {
   callback(data);
 }
 
-exports.get = function(id, callback) {
+exports.get = function(id, callback, onMissing) {
   model(function(handle) {
     handle.findOne({where: {uuid: id}}).then(function(data) {
-      console.log(data.value);
-      callback(data.value);
+      if(data) {
+        callback(data.value);
+      } else {
+        console.log('missing: ' +id);
+
+        if(onMissing) {
+          onMissing();
+        }
+      }
     });
   });
-}
-
-function createUUID() {
-  return uuid4().split('-').join('');
 }
 
 exports.create = function(data, callback) {
@@ -40,7 +47,7 @@ exports.create = function(data, callback) {
     var uuid = createUUID();
     var ip = '';
     var value = {
-      channel_name: 'private-rpi2',
+      channel_name: 'private-' +createUUID(),
       pusher_key: '599cb5ed77cd5efb659a',
       heartbeat_interval_in_seconds: 60
     };
