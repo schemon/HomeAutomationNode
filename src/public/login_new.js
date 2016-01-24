@@ -15,6 +15,36 @@ $(document).ready(function() {
   checkLoginState();
 });
 
+$(document).ready(function() {
+  $('#login-as-guest').click(function() {
+    window.location.replace('http://huvuddator.ddns.net/login/guest/device/' +$('#device-id').val());
+  });
+});
+
+
+var deviceData;
+
+function parseResponse(data) {
+  if(data.id) {
+    $.get('/device/' +data.id, function(resp) {
+      deviceData = data;
+      refreshDeviceDependentViews();
+    });
+  }
+}
+
+$(document).ready(function() {
+  refreshDeviceDependentViews();
+});
+
+function refreshDeviceDependentViews() {
+  if(deviceData) {
+    $('#status').append('Found nearby device');
+    $('#device-id').val(deviceData.id);      
+  }
+}
+
+
  // This is called with the results from from FB.getLoginStatus().
 function statusChangeCallback(response) {
   console.log('statusChangeCallback');
@@ -60,7 +90,7 @@ function getUrlVars() {
 // code below.
 function checkLoginState() {
   FB.getLoginStatus(function(response) {
-    //statusChangeCallback(response);
+    console.log(response);
   });
 }
 

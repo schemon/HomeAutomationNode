@@ -1,10 +1,4 @@
 
-$(document).ready(function() {
-  initPusher();
-});
-
-var endpoint = "/auth";
-var APP_KEY = '599cb5ed77cd5efb659a';
 
 var pusher;
 var channel;
@@ -13,19 +7,19 @@ Pusher.log = function(msg) {
   console.log(msg);
 };
 
-var initPusher = function(credentials) {
-  var auth = { params: credentials };
+var initPusher = function(deviceId, channelName, appKey, endpoint) {
+  var auth = { params: {deviceId: deviceId} };
   console.log('init pusher with');
   console.log(auth);
 
-  pusher = new Pusher(APP_KEY, {
+  pusher = new Pusher(appKey, {
   	authEndpoint: endpoint,
     auth: auth,
   	encrypted: true
-  });	
+  });
 
 
-  channel = pusher.subscribe('private-500629bc4e3c49cb8dcc892a4967a986');
+  channel = pusher.subscribe(channelName);
 
   channel.bind('pusher:subscription_succeeded', function() {
     sendPusherMessage({name:"Hello pi", payload:"", command:[]});
