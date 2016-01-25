@@ -1,7 +1,12 @@
 
 $(document).ready(function() {
-  $.get('/device', function(device) {
-    console.log(device)
+  $.get('/device', function(devices) {
+    console.log(devices)
+    devices = devices.filter(function(value) {
+      return value.exist
+    });
+
+    var device = devices[0]
     initPusher(
       device.id, 
       device.config.channel_name, 

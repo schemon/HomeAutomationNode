@@ -4,11 +4,11 @@ var pusher;
 var channel;
 
 Pusher.log = function(msg) {
-  console.log(msg);
+  //console.log(msg);
 };
 
 var initPusher = function(deviceId, channelName, appKey, endpoint) {
-  var auth = { params: {deviceId: deviceId} };
+  var auth = { params: {deviceToken: deviceId} };
   console.log('init pusher with');
   console.log(auth);
 
@@ -84,6 +84,7 @@ var refreshConnectionStatus = function() {
 
 var getCommands = function() {
 	$.get('/command', function(data) {
+    console.log(data)
 		htmlFormatCommands(data, function(htmlButtons) {
 			htmlButtons.forEach(function(item) {
 				$('#messages').append(item);

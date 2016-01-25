@@ -1,14 +1,16 @@
+
 var restify = require('restify');
 var fs = require('fs');
 var https = require('https');
 var request = require('request');
 var sessions = require('client-sessions');
+var async = require('async')
 
 
-
-
-var auth = require('./auth_endpoint.js')
-var DeviceDb = require('./device_db');
+// My own code
+var auth = require('./pusher/auth_endpoint')
+var DeviceDb = require('./database/device_db');
+var UserDb = require('./database/user_db')
 
 var server = restify.createServer();
 
@@ -43,24 +45,12 @@ server.use(function sessionParser(req, res, next) {
 
     var onBadToken = function() {
       var err = new restify.errors.NotAuthorizedError('Token is bad');
-      console.log('also bad');
       console.log(err);
-      next(err);
+      res.send({result: false});
+      res.end();
     }
 
-    var deviceToken = "";
-    if(req.params.deviceToken) {
-      deviceToken = req.params.deviceToken;
-    } else if(req.guestSession.deviceToken) {
-      deviceToken = req.guestSession.deviceToken;
-    }
-
-    validateDeviceToken(deviceToken, onValidToken, onBadToken);
-
-    //if(req.params.fbToken) {
-    //  validateFbToken(req.params.fbToken, onValidToken, onBadToken);
-    //}
-
+    validateDeviceToken(req.params.deviceToken, onValidToken, onBadToken);
   } else {
     next();
   }
@@ -86,42 +76,12 @@ server.get('/logout', function(req, res, next) {
   res.end();
 });
 
-server.get('/connect/device/:deviceToken/fb/:fbToken', handleAllLoginCases);
-
-function handleAllLoginCases(req, res, next) {
-  var onBadToken = function() {
-    var err = new restify.errors.NotAuthorizedError('Token is bad');
-    console.log('also bad');
-    console.log(err);
-    next(err);
-  }
-
-  var onValidToken = function(userId) {
-    req.session.userId = userId;
-    req.session.deviceToken = req.params.deviceToken;
-    res.writeHead(302, {
-      'Location': 'http://huvuddator.ddns.net/client'
-      //add other headers here...
-    });
-    res.end();
-  }
-
-  if(req.params.fbToken) {
-    console.log(req.params.fbToken);
-    validateFbToken(req.params.fbToken, onValidToken, onBadToken);
-  } else if(req.params.deviceToken) {
-    console.log(req.params.deviceToken);
-    validateDeviceToken(req.params.deviceToken, onValidToken, onBadToken);
-  } else {
-    next(new restify.errors.NotAuthorizedError('Token missing'))
-  }
-};
 
 server.get('/connect/device/:deviceToken', function(req, res, next) {
   console.log('/connect/device/' +req.params.deviceToken);
   console.log(req.session);
 
-  if(!req.session.fbToken) {
+  if(!req.session.userId) {
     res.writeHead(302, {'Location': 'http://huvuddator.ddns.net/logout'});
     res.end();
   }
@@ -134,30 +94,70 @@ server.get('/connect/device/:deviceToken', function(req, res, next) {
     next();
   }
 
+  UserDb.get(req.session.userId, 
+    function(user) {
+    console.log('Found user');
+    console.log(user);
+      if(user.value.device.indexOf(req.params.deviceToken) >= 0) { 
+        res.end(JSON.stringify({
+          result: true,
+          message: 'Device already exists'
+        }));
+        res.end();
+      } else {
+        user.value.device.push(req.params.deviceToken);
+        UserDb.update(user.id, user.value, function() {
+          res.end(JSON.stringify({
+            result: true,
+            message: 'Device added'
+          }));
+          res.end();
+        });
+      }
+    },
+    function() {
+      res.writeHead(302, {'Location': 'http://huvuddator.ddns.net/logout'});
+      res.end();
+    }
+  );
 
 
 });
 
 server.get('/login/fb/:fbToken', function(req, res, next) {
+  console.log('/login/fb/' +req.params.fbToken);
   if(req.params.fbToken) {
     validateFbToken(
       req.params.fbToken,
       function(fbId) {
+        console.log('Token valid fbId: ' +fbId)
+
+
         req.session.fbId = fbId;
         req.session.fbToken = req.params.fbToken;
 
-        require('./user_db').getFromFacebookId(fbId,
+        UserDb.getFromFacebookId(fbId,
           function(user) {
-            req.session.userId = user.uuid;
+            console.log('User known: ' +JSON.stringify(user));
+
+            req.session.userId = user.id;
             res.writeHead(302, {'Location': 'http://huvuddator.ddns.net/client'});
-            res.end();            
+            res.end();
           },
           function() {
-            require('./user_db').create(function(user) {
+            console.log('Create new user');
 
+            UserDb.create(function(user) {
               user.value.fb = {id: fbId};
-              require('./user_db').update(user.id, user.value, function() {
-                req.session.userId = user.uuid;
+              console.log('Update user to: ' +JSON.stringify(user));
+
+              UserDb.update(user.id, user.value, function() {
+                req.session.userId = user.id;
+
+                console.log('Done');
+                console.log(user);
+                console.log(req.session);
+
                 res.writeHead(302, {'Location': 'http://huvuddator.ddns.net/client'});
                 res.end(); 
               });
@@ -197,10 +197,15 @@ server.get('/login/guest/device/:deviceToken', function(req, res, next) {
 
 
 function validateDeviceToken(token, onValidToken, onBadToken) {
-  DeviceDb.get(token, function(data){
-      console.log('valid token!');
-      onValidToken(token);
-    }, onBadToken);
+  DeviceDb.get(token, function(err, data){
+    if(err) {
+      console.log('Invalid token!');
+      onBadToken('Invalid token')
+    }
+  
+    console.log('valid token!');
+    onValidToken(token);
+});
 }
 
 function validateFbToken(token, onValidToken, onBadToken) {
@@ -219,43 +224,18 @@ function respond(req, res, next) {
   next();
 }
 
-function commands(req, res, next) {
+server.get('/command', function(req, res, next) {
   var url = 'https://drive.google.com/uc?export=download&id=0B2JjHFhi0l1EczhkOVB3U2VWZUE';
   request(url, function (error, response, body) {
 	  if (!error && response.statusCode == 200) {
-      htmlFormatCommands(JSON.parse(body), function(result) {
-        res.send(result);
-        next();
-      });
+      res.send(JSON.parse(body));
+      next();
     } else {
       res.send(error);
       next();
     }
 	});
-}
-
-function htmlFormatCommands(body, callback) {
-  callback(body);
-
-  var command = body;
-  var i = 0;
-  var result = command.map(function(o) {
-    var item = '<button type="button" onClick="send(' + i + ')">' + o.name + '</button>';
-    if(i%2) item += '<br>';
-    i++;
-    return item; 
-  });
-
-  result.push('<script>'
-      +    'function send(id) {'
-      +    'var db = ' +JSON.stringify(command) +';' 
-      +      'sendPusherMessage(db[id]);'
-      +    '}'
-      + '</script>');
-
-  callback(result);
-}
-
+});
 
 function client(req, res, next) {
   console.log('/client');
@@ -307,7 +287,6 @@ server.post('/auth', auth.auth);
 server.get('/client', client);
 server.get('/script/:res', script);
 server.get('/public/:fileName', publicFile);
-server.get('/command', commands);
 
 
 server.get('/command/:sid', function(req, res, next) {
@@ -336,9 +315,12 @@ server.post('/command/:sid', function(req, res, next) {
 
 // DB endpoint
 server.get('/device/:id', function(req, res, next) {
-  console.log(req.params.id);
-  DeviceDb.get(req.params.id, function(data) {
-    res.send(data);
+  console.log('/device/' +req.params.id);
+  console.log(req.session);
+  console.log(req.guestSession);
+
+  DeviceDb.get(req.params.id, function(err, data) {
+    res.send([data]);
     next();
   });
 });
@@ -349,26 +331,51 @@ server.get('/device', function(req, res, next) {
   console.log(req.session);
   console.log(req.guestSession);
 
-  var session = req.session || req.guestSession;
-  console.log(session.deviceToken);
-  console.log(session.userId);
+  if(req.session.userId) {
+    UserDb.get(req.session.userId, function(user) {
+      console.log(user);
 
+      async.map(user.value.device, DeviceDb.get, function(err, result) {
+        console.log(result);
+        res.send(result);
+        res.end();
+      });
+      /*
+      if(user.value.device.length < 1) {
+          res.send([]);
+          next();
+      } else {
+        DeviceDb.get(user.value.device[0], function(device) {
+          console.log(device);
+          res.send(device);
+          next();
+        });        
+      }
 
-  DeviceDb.get(req.guestSession.deviceToken, function(data) {
-    res.send(data);
-    next();
-  });
+      */
+    });
+
+  } else if(req.guestSession.deviceToken) {
+    DeviceDb.get(req.guestSession.deviceToken, function(err, data) {
+      res.send([data]);
+      res.end();
+    });
+  } else {
+    res.send(JSON.stringify({result: false, message: 'No'}));
+    res.end();
+  }
 });
 
 server.post('/device', function(req, res, next) {
-  DeviceDb.create('{}', function(data) {
+  console.log('POST /device')
+  DeviceDb.create('{}', function(err, data) {
     res.send(data);
     next();
   });
 });
 
 server.get('/user/:id', function(req, res, next) {
-  var UserDB = require('./user_db');
+  var UserDB = UserDb;
   UserDB.get(req.params.id, function(data) {
     res.send(data);
     next();
@@ -377,7 +384,7 @@ server.get('/user/:id', function(req, res, next) {
 
 server.post('/user', function(req, res, next) {
   console.log(req.body);
-  var UserDB = require('./user_db');
+  var UserDB = UserDb;
   UserDB.create(function(data) {
     res.end(JSON.stringify(data));
     next();
@@ -388,11 +395,11 @@ server.post('/user/:userId/device', function(req, res, next) {
   console.log(req.body);
   console.log(req.params.deviceId);
 
-  var UserDB = require('./user_db');
+  var UserDB = UserDb;
 
   UserDB.get(req.params.userId, function(value) {
     DeviceDb.get(req.params.deviceId, 
-    function(data) {
+    function(err, data) {
       value.device.push(req.params.deviceId);
       UserDB.update(req.params.userId, value, function(result) {
         res.end(JSON.stringify(result));

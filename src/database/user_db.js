@@ -13,7 +13,7 @@ function init() {
 
 function model(callback) {
   var sequelize = init();
-  var data = sequelize.define('device', {
+  var data = sequelize.define('user', {
    uuid: {
       type: Sequelize.UUID,
       defaultValue: Sequelize.UUIDV4,
@@ -22,22 +22,26 @@ function model(callback) {
     ip: Sequelize.CHAR,
     value: Sequelize.JSONB
   });
-  callback(data);
+  data.sync().then(callback(data));
 }
 
 exports.get = function(id, callback, onMissing) {
-  model(function(handle) {
-    handle.findOne({where: {uuid: id}}).then(function(data) {
-      if(data) {
-        result = {
-          id: id,
-          config: data.value
-        };
-        result.config.auth_endpoint = '/auth';
-        callback(result);
-      } else {
-        console.log('missing: ' +id);
+  getOne({uuid: id}, callback, onMissing);
+}
 
+exports.getFromFacebookId = function(fbId, callback, onMissing) {
+  getOne({value: {fb: {id: fbId}}}, callback, onMissing);
+}
+
+function getOne(where, callback, onMissing) {
+    model(function(handle) {
+    handle.findOne({where: where}).then(function(data) {
+      if(data) {
+        callback({
+          id: data.uuid.split('-').join(''),
+          value: data.value
+        });
+      } else {
         if(onMissing) {
           onMissing();
         }
@@ -46,26 +50,32 @@ exports.get = function(id, callback, onMissing) {
   });
 }
 
-exports.create = function(data, callback) {
-  console.log(data);
+exports.create = function(callback) {
   model(function(handle) {
     var uuid = createUUID();
     var ip = '';
     var value = {
-      channel_name: 'private-' +createUUID(),
-      pusher_key: '599cb5ed77cd5efb659a',
-      heartbeat_interval_in_seconds: 60,
-      auth_endpoint: '/auth',
-      available_for_pairing: true
+      device: []
     };
 
     handle.upsert({uuid: uuid, ip: ip, value: value, createdAt: new Date(), updatedAt: new Date()}).then(function(d){
       result = {
         id: uuid,
-        config: value
+        value: value,
       };
       console.log(result); 
       callback(result);
     });
   });
 }
+
+exports.update = function(id, value, callback) {
+  console.log("Updating" +value +" to " +id);
+  model(function(handle) {
+    handle.upsert({uuid: id, value: value}).then(function(d) {
+      callback(true);
+    });
+  });
+}
+
+

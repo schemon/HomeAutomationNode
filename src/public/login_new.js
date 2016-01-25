@@ -34,6 +34,7 @@ function parseResponse(data) {
 }
 
 $(document).ready(function() {
+  window.fbAsyncInit();
   refreshDeviceDependentViews();
 });
 
