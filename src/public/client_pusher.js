@@ -22,7 +22,7 @@ var initPusher = function(deviceId, channelName, appKey, endpoint) {
   channel = pusher.subscribe(channelName);
 
   channel.bind('pusher:subscription_succeeded', function() {
-    sendPusherMessage({name:"Hello pi", payload:"", command:[]});
+    sendPusherMessage({name:"Spisen", message:"sensor"});
   });
 
   channel.bind('client-talk', onMessage); 
@@ -42,12 +42,24 @@ var onMessage = function(data) {
   console.log(data);
 
   timeOfLatestBeep = new Date().getTime();
-
+ 
   if(data.message == 'beep') {
-  } else {
+  } else if(data.message) {
+    console.log(data.message)
+    var message = JSON.parse(data.message)
+    if(message.handled) {
+      var clickedButton = $('[data-name="' +message.handled +'"]')
+      if(message.value > 550) {
+        var text =  'is on'
+      } else {
+        var text = 'is off'
+      }
+      clickedButton.html(message.handled +' ' +text)
+    }
+
     $('#status-message').html('<div>' +data.message + '</div>');
   }
-};
+}
 
 
 // Read a page's GET URL variables and return them as an associative array.
@@ -98,7 +110,7 @@ function htmlFormatCommands(body, callback) {
   var i = 0;
   var result = command.map(function(o) {
     var item = '<div class="command-holder">' 
-    + '<button class="command" onClick="send(' + i + ')">' + o.name + '</button>'
+    + '<button class="command" data-name="' +o.name +'" onClick="send(' + i + ')">' + o.name + '</button>'
     + '</div>';
 
     if(i%2) item += '<br>';
